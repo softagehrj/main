@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Text Extractor</title>
+</head>
+<body>
+  <input type="file" id="pdfFile" />
+  <button onclick="extractText()">Extract Text</button>
+  <pre id="output"></pre>
+
+  <!-- Include PDF.js library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+  <script>
+    // Ensure pdfjsLib is defined and set workerSrc
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+  </script>
+
+  <script>
+    async function extractText() {
+      const fileInput = document.getElementById('pdfFile');
+      const output = document.getElementById('output');
+
+      if (fileInput.files.length === 0) {
+        alert('Please select a PDF file.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const fileReader = new FileReader();
+
+      fileReader.onload = async function () {
+        const typedArray = new Uint8Array(this.result);
+
+        // Load PDF from file
+        const loadingTask = pdfjsLib.getDocument(typedArray);
+        const pdf = await loadingTask.promise;
+        let text = '';
+
+        // Loop through each page and get text content
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+          const page = await pdf.getPage(pageNumber);
+          const textContent = await page.getTextContent();
+
+          textContent.items.forEach(item => {
+            text += item.str + ' ';
+          });
+        }
+
+        output.textContent = text; // Display extracted text
+      };
+
+      fileReader.readAsArrayBuffer(file);
+    }
+  </script>
+</body>
+</html>
