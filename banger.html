@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Renamer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script>
+        // Ensure pdfjsLib is defined and set workerSrc
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+    </script>
+</head>
+<body>
+
+    <button onclick="renamePdf()">Rename PDF</button>
+
+    <script>
+    async function renamePdf() {
+      const pdfUrl = 'https://arxiv.org/pdf/2411.02381'; // Predefined PDF URL
+
+      try {
+        // Fetch the PDF file from the internet
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch PDF.');
+        }
+
+        // Convert the response to an ArrayBuffer
+        const arrayBuffer = await response.arrayBuffer();
+        const typedArray = new Uint8Array(arrayBuffer);
+
+        // Load the PDF document from the ArrayBuffer
+        const loadingTask = pdfjsLib.getDocument(typedArray);
+        const pdf = await loadingTask.promise;
+        let text = '';
+
+        // Extract text from each page of the PDF
+      //   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+          const page = await pdf.getPage(1);
+          const textContent = await page.getTextContent();
+
+          textContent.items.forEach(item => {
+            text += item.str + ' ';
+          });
+      //   }
+        console.log(text);
+
+        // Analyze text and suggest a new filename
+        const suggestedFilename = await analyzeTextAndSuggestFilename(text);
+
+        // Create a new Blob with the same content and a new name
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        // Trigger a download of the renamed file
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = suggestedFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while processing the PDF.');
+      }
+    }
+
+    async function analyzeTextAndSuggestFilename(text) {
+
+          const { available } = await ai.languageModel.capabilities();
+          if (available !== "no") {
+            const session = await ai.languageModel.create({
+              temperature: 1,
+              topK: 1
+            });
+            const result = await session.prompt(`give me just one filename for the file  : ${text}`);
+            const suggestedFilename = result.replace(/\s+/g, '_') ;
+            console.log('yaha tak aya hai');
+            return suggestedFilename;
+          }
+          else{
+            console.log('some error');
+          }
+    }
+    </script>
+
+</body>
+</html>
